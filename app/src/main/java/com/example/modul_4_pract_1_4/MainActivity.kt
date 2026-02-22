@@ -6,10 +6,11 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,15 +20,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.example.modul_4_pract_1_4.ui.theme.Modul_4_pract_14Theme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
@@ -43,102 +47,103 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Modul_4_pract_14Theme {
-                TimerNotification(context = this@MainActivity)
+                OneTimeTimerScreen()
             }
         }
     }
 }
 
-
 @Composable
-fun TimerNotification(context: Context){
-    var timerValue by remember { mutableStateOf(0) }
+fun OneTimeTimerScreen() {
+    val context = LocalContext.current
+    var secondsInput by remember { mutableStateOf("") }
     var isTimerRunning by remember { mutableStateOf(false) }
 
-
-    val broadcastReceiver = remember {
+    // Receiver для получения события о завершении таймера
+    val timerFinishedReceiver = remember {
         object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == TimerService.TIMER_UPDATE_ACTION) {
-                    val seconds = intent.getIntExtra(TimerService.TIMER_VALUE_EXTRA, 0)
-                    Log.d("MAIN_ACTIVITY", "📱 Получен broadcast: $seconds сек")
-                    timerValue = seconds
+                if (intent?.action == OneTimeTimerService.TIMER_FINISHED_ACTION) {
+                    isTimerRunning = false
                 }
             }
         }
     }
 
     DisposableEffect(Unit) {
-        Log.d("MAIN_ACTIVITY", "📱 Регистрация receiver")
-        val filter = IntentFilter(TimerService.TIMER_UPDATE_ACTION)
-        context.registerReceiver(broadcastReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        val filter = IntentFilter(OneTimeTimerService.TIMER_FINISHED_ACTION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(timerFinishedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(timerFinishedReceiver, filter)
+        }
 
         onDispose {
-            Log.d("MAIN_ACTIVITY", "📱 Отмена регистрации receiver")
-            context.unregisterReceiver(broadcastReceiver)
+            context.unregisterReceiver(timerFinishedReceiver)
         }
     }
 
     fun startTimer() {
-        val intent = Intent(context, TimerService::class.java)
+        val seconds = secondsInput.toIntOrNull()
+
+        val intent = Intent(context, OneTimeTimerService::class.java).apply {
+            putExtra(OneTimeTimerService.EXTRA_SECONDS, seconds)
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.startForegroundService(intent)
         } else {
             context.startService(intent)
         }
+
         isTimerRunning = true
+        secondsInput = ""
     }
-
-    fun stopTimer(){
-        val intent = Intent(context, TimerService::class.java)
-        isTimerRunning = false
-        context.stopService(intent)
-        timerValue = 0
-    }
-
-
 
     Column(
-        modifier = Modifier.fillMaxSize()
-            .padding(top = 25.dp)
+        modifier = Modifier
             .fillMaxSize()
-            .padding(top = 50.dp, start = 16.dp, end = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Таймер и точка",
-            fontSize = 50.sp,
-            modifier = Modifier.padding(bottom = 32.dp, top = 100.dp),
-            style = MaterialTheme.typography.headlineSmall
-        )
-
-        Text(
-            text = "$timerValue сек",
-            fontSize = 64.sp,
+            text = "Одноразовый таймер",
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 48.dp)
         )
 
-        Button(onClick = { startTimer() },
+        OutlinedTextField(
+            value = secondsInput,
+            onValueChange = { secondsInput = it.filter { char -> char.isDigit() } },
+            label = { Text("Введите количество секунд") },
+            placeholder = { Text("например: 30") },
             modifier = Modifier
-                .width(120.dp)
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            enabled = !isTimerRunning,
+            singleLine = true
+        )
+
+        Button(
+            onClick = { startTimer() },
+            enabled = !isTimerRunning && secondsInput.isNotBlank(),
+            modifier = Modifier
+                .width(200.dp)
                 .height(60.dp)
         ) {
-            Text("Старт", fontSize=18.sp)
+            Text("Запустить таймер", fontSize = 18.sp)
         }
 
-
-        Button(onClick = { stopTimer() },
-            modifier = Modifier
-                .padding(top = 30.dp)
-                .width(120.dp)
-                .height(60.dp)
-        ) {
-            Text("Стоп", fontSize=18.sp)
+        if (isTimerRunning) {
+            Text(
+                text = "Таймер запущен...",
+                modifier = Modifier.padding(top = 24.dp),
+                color = MaterialTheme.colorScheme.onPrimary
+            )
         }
-
     }
 }
-
 
 
