@@ -4,26 +4,45 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.lifecycle.lifecycleScope
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import com.example.modul_4_pract_1_4.data.GithubRepo
+import com.example.modul_4_pract_1_4.data.GithubRepository
 import com.example.modul_4_pract_1_4.ui.theme.Modul_4_pract_14Theme
-import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlin.system.measureTimeMillis
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.yield
-import java.io.File
-import java.security.MessageDigest
-import kotlin.coroutines.cancellation.CancellationException
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 
 
 class MainActivity : ComponentActivity() {
 
-    private val TAG = "MainActivity"
+    private val repository by lazy { GithubRepository(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,165 +50,123 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Modul_4_pract_14Theme {
+                GithubSearchScreen(repository)
             }
         }
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            findDuplicates()
-        }
-
-    }
-
-
-    fun findDuplicates() {
-        val time = measureTimeMillis {
-            runBlocking {
-                val timeoutSeconds = 5L
-
-                val directoryPath = File(filesDir, "test_json").absolutePath
-                println("Сканируем директорию: $directoryPath")
-
-
-                val result = withTimeoutOrNull(timeoutSeconds * 1000) {
-                    findDuplicateFiles(directoryPath)
-                }
-
-                if (result == null) {
-                    println("Поиск прерван по таймауту ($timeoutSeconds сек)")
-                } else {
-                    printDuplicates(result)
-                }
-            }
-        }
-        println("Общее время выполнения: ${time / 1000.0} секунд")
-    }
-
-//    private fun createTestJsonFiles() {
-//        val testDir = File(filesDir, "test_json")
-//
-//        File(testDir, "user1.json").writeText("""{"id": 1, "name": "Alice"}""")
-//        File(testDir, "user2.json").writeText("""{"id": 2, "name": "Bob"}""")
-//        File(testDir, "user3.json").writeText("""{"id": 3, "name": "Charlie"}""")
-//
-//        File(testDir, "duplicate1.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
-//        File(testDir, "duplicate2.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
-//        File(testDir, "duplicate3.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
-//
-//        File(testDir, "group2_a.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
-//        File(testDir, "group2_b.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
-//
-//        val subDir = File(testDir, "subdir")
-//        subDir.mkdirs()
-//        File(subDir, "nested1.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
-//        File(subDir, "nested2.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
-//
-//        File(subDir, "unique_nested.json").writeText("""{"city": "Tokyo", "temp": 11, "condition": "rain"}""")
-//
-//        println("Тестовые JSON файлы созданы в: ${testDir.absolutePath}")
-//        println("Создано файлов: ${testDir.walkTopDown().filter { it.isFile && it.extension == "json" }.count()}")
-//
-//    }
-
-
-    private suspend fun findDuplicateFiles(rootPath: String): Map<String, List<File>> {
-        return withContext(Dispatchers.IO) {
-            //поиск файлов json
-            val jsonFiles = findJsonFiles(File(rootPath))
-            println("Найдено JSON файлов: ${jsonFiles.size}")
-
-            if (jsonFiles.isEmpty()) {
-                return@withContext emptyMap()
-            }
-
-            println("\nСписок файлов:")
-            jsonFiles.forEachIndexed { index, file ->
-                println("   ${index + 1}. ${file.relativeTo(File(rootPath))} (${file.length()} байт)")
-            }
-            println()
-
-
-            // для каждого файла вычисляем SHA-256 параллельно
-            val deferredResults = jsonFiles.map { file ->
-                async {
-                    file to computeSha256(file)
-                }
-            }
-
-            val filesWithHashes = deferredResults.awaitAll()
-
-            // группируем по хэшу и оставляем только дубликаты (где больше 1 файла)
-            val duplicates = filesWithHashes
-                .filter { it.second != null }
-                .groupBy({ it.second!! }, { it.first })
-                .filter { it.value.size > 1 }
-
-            println("Найдено групп дубликатов: ${duplicates.size}")
-
-            duplicates
-        }
-    }
-    private fun findJsonFiles(directory: File): List<File> {
-        val result = mutableListOf<File>()
-
-        if (!directory.exists()) {
-            println("Директория не существует: ${directory.absolutePath}")
-            return result
-        }
-
-        directory.listFiles()?.forEach { file ->
-            if (file.isDirectory) {
-                result.addAll(findJsonFiles(file))
-            } else if (file.isFile && file.extension.equals("json", ignoreCase = true)) {
-                result.add(file)
-            }
-        }
-
-        return result
-    }
-
-    private suspend fun computeSha256(file: File): String? {
-        return withContext(Dispatchers.IO) {
-            try {
-                delay(500)
-
-                val digest = MessageDigest.getInstance("SHA-256")
-
-                file.inputStream().use { inputStream ->
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-
-                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                        digest.update(buffer, 0, bytesRead)
-                        yield()
-                    }
-                }
-
-                // конвертируем в hex строку
-                digest.digest().joinToString("") { "%02x".format(it) }.also { hash ->
-                    println("Хеш для ${file.name}: ${hash.take(8)}...")
-                }
-            } catch (e: CancellationException) {
-                println("Отмена вычисления хеша для ${file.name}")
-                throw e
-            } catch (e: Exception) {
-                println("Ошибка чтения файла ${file.name}: ${e.message}")
-                null
-            }
-        }
-    }
-
-    private fun printDuplicates(duplicates: Map<String, List<File>>) {
-        println("\nНайденные дубликаты:")
-        var groupIndex = 1
-        duplicates.forEach { (hash, files) ->
-            println("\nГруппа ${groupIndex++} (SHA-256: ${hash.take(8)}...):")
-            files.forEachIndexed { index, file ->
-                println("   ${index + 1}. ${file.name} (${file.length()} байт)")
-            }
-        }
-        println("\nВсего групп дубликатов: ${duplicates.size}")
     }
 }
 
+@Composable
+fun GithubSearchScreen(repository: GithubRepository) {
+    var searchQuery by remember { mutableStateOf("") }
+    var searchResults by remember { mutableStateOf<List<GithubRepo>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+    var searchJob by remember { mutableStateOf<Job?>(null) }
 
+    val coroutineScope = rememberCoroutineScope()
+
+    fun performSearch(query: String) {
+        searchJob?.cancel() //отмена предыдущего поиска
+
+        searchJob = coroutineScope.launch {
+            isLoading = true
+
+            delay(500)
+
+            if (isActive) {
+                if (query.isNotBlank()) {
+                    val results = withContext(Dispatchers.IO) {
+                        repository.searchRepos(query)
+                    }
+                    searchResults = results
+                } else {
+                    searchResults = emptyList()
+                }
+
+                isLoading = false
+            }
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(15.dp)
+    ) {
+
+        Spacer(modifier = Modifier.height(30.dp))
+
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { newQuery ->
+                searchQuery = newQuery
+                performSearch(newQuery)
+            },
+            label = { Text("Поиск репозиториев GitHub") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(searchResults) { repo ->
+                RepoItem(repo)
+            }
+        }
+    }
+}
+
+@Composable
+fun RepoItem(repo: GithubRepo) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = repo.full_name,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            repo.description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                repo.language?.let {
+                    Text(
+                        text = "Язык: $it",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+
+                Text(
+                    text = "Популярность: ${repo.stargazers_count}",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
 

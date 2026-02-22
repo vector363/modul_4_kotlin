@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "full_name": "JetBrains/kotlin",
+    "description": "The Kotlin Programming Language",
+    "stargazers_count": 48000,
+    "language": "Kotlin"
+  },
+  {
+    "id": 2,
+    "full_name": "square/okhttp",
+    "description": "Square’s meticulous HTTP client for the JVM, Android, and GraalVM.",
+    "stargazers_count": 45000,
+    "language": "Java"
+  },
+  {
+    "id": 3,
+    "full_name": "google/gson",
+    "description": "A Java serialization/deserialization library to convert Java Objects into JSON and back",
+    "stargazers_count": 23000,
+    "language": "Java"
+  },
+  {
+    "id": 4,
+    "full_name": "ReactiveX/RxJava",
+    "description": "RxJava – Reactive Extensions for the JVM – a library for composing asynchronous and event-based programs using observable sequences for the Java VM.",
+    "stargazers_count": 47000,
+    "language": "Java"
+  },
+  {
+    "id": 5,
+    "full_name": "square/retrofit",
+    "description": "A type-safe HTTP client for Android and the JVM",
+    "stargazers_count": 42000,
+    "language": "Java"
+  },
+  {
+    "id": 6,
+    "full_name": "Kotlin/kotlinx.coroutines",
+    "description": "Library support for Kotlin coroutines",
+    "stargazers_count": 13000,
+    "language": "Kotlin"
+  },
+  {
+    "id": 7,
+    "full_name": "google/material-design-icons",
+    "description": "Material Design icons by Google",
+    "stargazers_count": 49000,
+    "language": "CSS"
+  },
+  {
+    "id": 8,
+    "full_name": "airbnb/lottie-android",
+    "description": "Render After Effects animations natively on Android and iOS, Web, and React Native",
+    "stargazers_count": 35000,
+    "language": "Java"
+  },
+  {
+    "id": 9,
+    "full_name": "facebook/react-native",
+    "description": "A framework for building native applications using React",
+    "stargazers_count": 115000,
+    "language": "JavaScript"
+  },
+  {
+    "id": 10,
+    "full_name": "flutter/flutter",
+    "description": "Flutter makes it easy and fast to build beautiful apps for mobile and beyond",
+    "stargazers_count": 160000,
+    "language": "Dart"
+  },
+  {
+    "id": 11,
+    "full_name": "square/picasso",
+    "description": "A powerful image downloading and caching library for Android",
+    "stargazers_count": 18500,
+    "language": "Java"
+  },
+  {
+    "id": 12,
+    "full_name": "bumptech/glide",
+    "description": "An image loading and caching library for Android focused on smooth scrolling",
+    "stargazers_count": 35000,
+    "language": "Java"
+  },
+  {
+    "id": 13,
+    "full_name": "jenkinsci/jenkins",
+    "description": "Jenkins automation server",
+    "stargazers_count": 22000,
+    "language": "Java"
+  },
+  {
+    "id": 14,
+    "full_name": "apache/spark",
+    "description": "Apache Spark - A unified analytics engine for large-scale data processing",
+    "stargazers_count": 38000,
+    "language": "Scala"
+  },
+  {
+    "id": 15,
+    "full_name": "spring-projects/spring-boot",
+    "description": "Spring Boot makes it easy to create stand-alone, production-grade Spring based Applications",
+    "stargazers_count": 72000,
+    "language": "Java"
+  }
+]

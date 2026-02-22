@@ -42,6 +42,7 @@ android {
 dependencies {
 
     implementation("com.google.code.gson:gson:2.10.1")
+    implementation("androidx.compose.foundation:foundation-layout")
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9")
     implementation(libs.androidx.core.ktx)
