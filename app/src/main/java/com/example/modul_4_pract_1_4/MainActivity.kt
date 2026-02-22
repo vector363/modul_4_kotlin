@@ -1,19 +1,24 @@
 package com.example.modul_4_pract_1_4
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
 import com.example.modul_4_pract_1_4.ui.theme.Modul_4_pract_14Theme
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.system.measureTimeMillis
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import kotlin.random.Random
-
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.coroutines.yield
+import java.io.File
+import java.security.MessageDigest
+import kotlin.coroutines.cancellation.CancellationException
 
 
 class MainActivity : ComponentActivity() {
@@ -29,123 +34,162 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        loadAllData()
+        lifecycleScope.launch(Dispatchers.IO) {
+            findDuplicates()
+        }
+
     }
 
-    fun loadAllData() {
+
+    fun findDuplicates() {
         val time = measureTimeMillis {
             runBlocking {
+                val timeoutSeconds = 5L
 
-                val usersDeferred = async {
-                    try {
-                        LoadUsers()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки пользователей: ${e.message}")
-                        emptyList<String>()
-                    }
-                }
-                val salesDeferred = async {
-                    try {
-                        LoadSales()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки продаж: ${e.message}")
-                        emptyMap<String, Int>()
-                    }
+                val directoryPath = File(filesDir, "test_json").absolutePath
+                println("Сканируем директорию: $directoryPath")
+
+
+                val result = withTimeoutOrNull(timeoutSeconds * 1000) {
+                    findDuplicateFiles(directoryPath)
                 }
 
-                val weatherDeferred = async {
-                    try {
-                        LoadWeather()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки погоды: ${e.message}")
-                        emptyList<String>()
-                    }
+                if (result == null) {
+                    println("Поиск прерван по таймауту ($timeoutSeconds сек)")
+                } else {
+                    printDuplicates(result)
                 }
-
-                val users = usersDeferred.await()
-                val sales = salesDeferred.await()
-                val weather = weatherDeferred.await()
-
-                Log.d(TAG, "Пользователи: $users")
-                Log.d(TAG, "Продажи: $sales")
-                Log.d(TAG, "Погода: $weather")
-
             }
         }
-        Log.d(TAG, "Общее время выполнения: ${time / 1000.0} секунд")
-
-
+        println("Общее время выполнения: ${time / 1000.0} секунд")
     }
-    suspend fun LoadUsers():List<String>{
-        delay(1800)
 
-        if (Random.nextFloat() < 0.7f) {
-            throw Exception("Ошибка соединения при загрузке пользователей")
+//    private fun createTestJsonFiles() {
+//        val testDir = File(filesDir, "test_json")
+//
+//        File(testDir, "user1.json").writeText("""{"id": 1, "name": "Alice"}""")
+//        File(testDir, "user2.json").writeText("""{"id": 2, "name": "Bob"}""")
+//        File(testDir, "user3.json").writeText("""{"id": 3, "name": "Charlie"}""")
+//
+//        File(testDir, "duplicate1.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
+//        File(testDir, "duplicate2.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
+//        File(testDir, "duplicate3.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
+//
+//        File(testDir, "group2_a.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
+//        File(testDir, "group2_b.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
+//
+//        val subDir = File(testDir, "subdir")
+//        subDir.mkdirs()
+//        File(subDir, "nested1.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
+//        File(subDir, "nested2.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
+//
+//        File(subDir, "unique_nested.json").writeText("""{"city": "Tokyo", "temp": 11, "condition": "rain"}""")
+//
+//        println("Тестовые JSON файлы созданы в: ${testDir.absolutePath}")
+//        println("Создано файлов: ${testDir.walkTopDown().filter { it.isFile && it.extension == "json" }.count()}")
+//
+//    }
+
+
+    private suspend fun findDuplicateFiles(rootPath: String): Map<String, List<File>> {
+        return withContext(Dispatchers.IO) {
+            //поиск файлов json
+            val jsonFiles = findJsonFiles(File(rootPath))
+            println("Найдено JSON файлов: ${jsonFiles.size}")
+
+            if (jsonFiles.isEmpty()) {
+                return@withContext emptyMap()
+            }
+
+            println("\nСписок файлов:")
+            jsonFiles.forEachIndexed { index, file ->
+                println("   ${index + 1}. ${file.relativeTo(File(rootPath))} (${file.length()} байт)")
+            }
+            println()
+
+
+            // для каждого файла вычисляем SHA-256 параллельно
+            val deferredResults = jsonFiles.map { file ->
+                async {
+                    file to computeSha256(file)
+                }
+            }
+
+            val filesWithHashes = deferredResults.awaitAll()
+
+            // группируем по хэшу и оставляем только дубликаты (где больше 1 файла)
+            val duplicates = filesWithHashes
+                .filter { it.second != null }
+                .groupBy({ it.second!! }, { it.first })
+                .filter { it.value.size > 1 }
+
+            println("Найдено групп дубликатов: ${duplicates.size}")
+
+            duplicates
+        }
+    }
+    private fun findJsonFiles(directory: File): List<File> {
+        val result = mutableListOf<File>()
+
+        if (!directory.exists()) {
+            println("Директория не существует: ${directory.absolutePath}")
+            return result
         }
 
-        val jsonString = loadJsonFromAssets("users.json")
-        val listType = object : TypeToken<List<User>>() {}.type
-        val users: List<User> = Gson().fromJson(jsonString, listType)
-        val names = users.map { it.name }
-        return names
-    }
-
-    suspend fun LoadSales():Map<String, Int>{
-        delay(1200)
-
-        if (Random.nextFloat() < 0.2f) {
-            throw Exception("Ошибка сервера при загрузке продаж")
+        directory.listFiles()?.forEach { file ->
+            if (file.isDirectory) {
+                result.addAll(findJsonFiles(file))
+            } else if (file.isFile && file.extension.equals("json", ignoreCase = true)) {
+                result.add(file)
+            }
         }
 
-        val jsonString = loadJsonFromAssets("sales.json")
-        val salesData: SalesData = Gson().fromJson(jsonString, SalesData::class.java)
-        val salesMap = salesData.items.associate { it.product to it.qty }
-        return salesMap
-
+        return result
     }
 
-    suspend fun LoadWeather():List<String>{
-        delay(2500)
+    private suspend fun computeSha256(file: File): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                delay(500)
 
-        if (Random.nextFloat() < 0.2f) {
-            throw Exception("Таймаут при загрузке погоды")
+                val digest = MessageDigest.getInstance("SHA-256")
+
+                file.inputStream().use { inputStream ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+
+                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                        digest.update(buffer, 0, bytesRead)
+                        yield()
+                    }
+                }
+
+                // конвертируем в hex строку
+                digest.digest().joinToString("") { "%02x".format(it) }.also { hash ->
+                    println("Хеш для ${file.name}: ${hash.take(8)}...")
+                }
+            } catch (e: CancellationException) {
+                println("Отмена вычисления хеша для ${file.name}")
+                throw e
+            } catch (e: Exception) {
+                println("Ошибка чтения файла ${file.name}: ${e.message}")
+                null
+            }
         }
-
-        val jsonString = loadJsonFromAssets("weather.json")
-        val listType = object : TypeToken<List<Weather>>() {}.type
-        val weatherList: List<Weather> = Gson().fromJson(jsonString, listType)
-        val weatherStrings = weatherList.map { "${it.city}: ${it.temp}°C" }
-        return weatherStrings
     }
 
-
-    private fun loadJsonFromAssets(filename: String): String {
-        return assets.open(filename).bufferedReader().use { it.readText() }
+    private fun printDuplicates(duplicates: Map<String, List<File>>) {
+        println("\nНайденные дубликаты:")
+        var groupIndex = 1
+        duplicates.forEach { (hash, files) ->
+            println("\nГруппа ${groupIndex++} (SHA-256: ${hash.take(8)}...):")
+            files.forEachIndexed { index, file ->
+                println("   ${index + 1}. ${file.name} (${file.length()} байт)")
+            }
+        }
+        println("\nВсего групп дубликатов: ${duplicates.size}")
     }
-
-
-    data class User(
-        val id: Int,
-        val name: String
-    )
-    data class SaleItem(
-        val product: String,
-        val qty: Int,
-        val revenue: Int
-    )
-
-    data class SalesData(
-        val today: String,
-        val items: List<SaleItem>
-    )
-    data class Weather(
-        val city: String,
-        val temp: Int,
-        val condition: String
-    )
-
 }
-
 
 
 
