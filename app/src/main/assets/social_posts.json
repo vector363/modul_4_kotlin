@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "userid": 1,
+    "title": "Красивый закат сегодня",
+    "body": "Смотрите, какой цвет неба...",
+    "avatarurl": "https://i.pravatar.cc/150?img=1"
+  },
+  {
+    "id": 2,
+    "userid": 2,
+    "title": "Новый кофе-мастер-класс",
+    "body": "Приходите все!",
+    "avatarurl": "https://i.pravatar.cc/150?img=2"
+  },
+  {
+    "id": 3,
+    "userid": 3,
+    "title": "Новый кофе-мастер-класс",
+    "body": "Приходите все!",
+    "avatarurl": "https://i.pravatar.cc/150?img=2"
+  },
+  {
+    "id": 4,
+    "userid": 4,
+    "title": "Новый кофе-мастер-класс",
+    "body": "Приходите все!",
+    "avatarurl": "https://i.pravatar.cc/150?img=2"
+  },
+  {
+    "id": 5,
+    "userid": 5,
+    "title": "Поезда",
+    "body": "Уехали в отпуск",
+    "avatarurl": "https://i.pravatar.cc/150?img=2"
+  }
+]
