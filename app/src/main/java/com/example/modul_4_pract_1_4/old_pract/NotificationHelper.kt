@@ -1,4 +1,4 @@
-package com.example.modul_4_pract_1_4
+package com.example.modul_4_pract_1_4.old_pract
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -6,7 +6,6 @@ import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
-import androidx.work.WorkManager
 
 object NotificationHelper {
     const val CHANNEL_ID = "weather_channel"

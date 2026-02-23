@@ -1,4 +1,4 @@
-package com.example.modul_4_pract_1_4
+package com.example.modul_4_pract_1_4.old_pract
 
 import android.content.Context
 import androidx.work.*
@@ -6,8 +6,6 @@ import com.example.modul_4_pract_1_4.data.WeatherData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.*
 
 class WeatherReportWorker(
     context: Context,
