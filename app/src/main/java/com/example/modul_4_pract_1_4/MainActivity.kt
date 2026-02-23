@@ -1,18 +1,12 @@
 package com.example.modul_4_pract_1_4
 
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.ServiceConnection
+
 import android.os.Bundle
-import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,100 +16,89 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.example.modul_4_pract_1_4.ui.theme.Modul_4_pract_14Theme
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import java.io.File
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 
 
 class MainActivity : ComponentActivity() {
-
-    private var randomNumberService: RandomNumberService? = null
-    private var isBound = false
-
-    private val serviceConnection = object : ServiceConnection {
-        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as RandomNumberService.RandomNumberBinder
-            randomNumberService = binder.getService()
-            isBound = true
-
-            // Регистрируем слушатель
-            randomNumberService?.registerListener(numberUpdateListener)
-
-            randomNumberService?.startGenerating()
-        }
-
-        override fun onServiceDisconnected(name: ComponentName?) {
-            randomNumberService = null
-            isBound = false
-        }
-    }
-
-    private val numberUpdateListener = object : RandomNumberService.NumberUpdateListener {
-        override fun onNumberUpdated(number: Int) {
-            _currentNumber.value = number
-        }
-    }
-
-    private val _currentNumber = mutableStateOf(0)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         setContent {
             Modul_4_pract_14Theme {
-                RandomNumberScreen(
-                    currentNumber = _currentNumber.value,
-                    isConnected = isBound,
-                    onConnect = { bindToService() },
-                    onDisconnect = { unbindFromService() }
-                )
+                PhotoProcessingScreen()
             }
-        }
-    }
-
-    private fun bindToService() {
-        if (!isBound) {
-            val intent = Intent(this, RandomNumberService::class.java)
-            bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-            println("🔌 Activity: Запрос на подключение к сервису")
-        }
-    }
-
-    private fun unbindFromService() {
-        if (isBound) {
-            //ОСТАНАВЛИВАЕМ ГЕНЕРАЦИЮ
-            randomNumberService?.stopGenerating()
-            randomNumberService?.unregisterListener(numberUpdateListener)
-            unbindService(serviceConnection)
-            isBound = false
-            randomNumberService = null
-            _currentNumber.value = 0
-            println("🔌 Activity: Отключение от сервиса")
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        if (isBound) {
-            unbindFromService()
         }
     }
 }
 
 @Composable
-fun RandomNumberScreen(
-    currentNumber: Int,
-    isConnected: Boolean,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit
-) {
+fun PhotoProcessingScreen() {
+    val context = LocalContext.current
+    val workManager = WorkManager.getInstance(context)
+
+    var currentStatus by remember { mutableStateOf("Готов к обработке") }
+    var currentProgress by remember { mutableStateOf(0) }
+    var isProcessing by remember { mutableStateOf(false) }
+    var resultMessage by remember { mutableStateOf("") }
+
+    val workInfos = workManager
+        .getWorkInfosForUniqueWorkFlow("photo_processing")
+        .collectAsStateWithLifecycle(initialValue = emptyList())
+
+
+    LaunchedEffect(workInfos.value) {
+        workInfos.value.forEach { workInfo ->
+            when (workInfo.state) {
+                WorkInfo.State.RUNNING -> {
+                    isProcessing = true
+                    val stage = workInfo.progress.getString("stage") ?: ""
+                    val progress = workInfo.progress.getInt("progress", 0)
+
+                    currentStatus = when (stage) {
+                        "Сжатие" -> "Сжимаем фото..."
+                        "Водяной знак" -> "Добавляем водяной знак..."
+                        "Загрузка" -> "Загружаем в облако..."
+                        else -> currentStatus
+                    }
+                    currentProgress = progress
+                }
+                WorkInfo.State.SUCCEEDED -> {
+                    if (workInfo.tags.contains("upload")) {
+                        isProcessing = false
+                        val fileName = workInfo.outputData.getString("file_name") ?: ""
+                        resultMessage = "Готово! Фото загружено\n" +
+                                "Файл: $fileName\n"
+                        currentProgress = 100
+                        currentStatus = "Завершено!"
+                    }
+                }
+                else -> {}
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -124,55 +107,113 @@ fun RandomNumberScreen(
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Случайные числа",
+            text = "Обработка фото",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.primary
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Card(
-            modifier = Modifier.size(200.dp),
-            elevation = CardDefaults.cardElevation(8.dp)
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.cardElevation(4.dp)
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            Text(
+                text = currentStatus,
+                modifier = Modifier.padding(16.dp),
+                style = MaterialTheme.typography.headlineSmall,
+                fontSize = 24.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        if (isProcessing) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                LinearProgressIndicator(
+                    progress = { currentProgress / 100f },
+                    modifier = Modifier.fillMaxWidth(),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 Text(
-                    text = if (isConnected) "$currentNumber" else "---",
-                    fontSize = if (isConnected) 48.sp else 32.sp,
-                    color = if (isConnected)
-                        MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    text = "$currentProgress%",
+                    style = MaterialTheme.typography.bodyLarge
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        Button(
+            onClick = {
+                startPhotoProcessing(context, workManager)
+            },
+            enabled = !isProcessing,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Button(
-                onClick = onConnect,
-                enabled = !isConnected,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Подключиться")
-            }
+            Text(if (isProcessing) "Обработка..." else "Начать обработку и загрузку")
+        }
 
-            Button(
-                onClick = onDisconnect,
-                enabled = isConnected,
-                modifier = Modifier.weight(1f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (resultMessage.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
                 )
             ) {
-                Text("Отключиться")
+                Text(
+                    text = resultMessage,
+                    modifier = Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
             }
         }
     }
 }
 
+private fun startPhotoProcessing(
+    context: android.content.Context,
+    workManager: WorkManager
+) {
+    val testPhotoFile = File(context.cacheDir, "test_photo.jpg")
+    testPhotoFile.writeText("fake image content")
+
+
+    val compressionWorker = OneTimeWorkRequestBuilder<PhotoCompressionWorker>()
+        .setInputData(
+            Data.Builder()
+                .putString("photo_path", testPhotoFile.absolutePath)
+                .build()
+        )
+        .addTag("compression")
+        .build()
+
+    val watermarkWorker = OneTimeWorkRequestBuilder<WatermarkWorker>()
+        .addTag("watermark")
+        .build()
+
+    val uploadWorker = OneTimeWorkRequestBuilder<UploadWorker>()
+        .addTag("upload")
+        .build()
+
+    workManager
+        .beginUniqueWork(
+            "photo_processing",
+            ExistingWorkPolicy.REPLACE,
+            compressionWorker
+        )
+        .then(watermarkWorker)
+        .then(uploadWorker)
+        .enqueue()
+}

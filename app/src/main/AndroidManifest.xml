@@ -21,17 +21,17 @@
         tools:targetApi="31">
 
         <service
-            android:name=".TimerService"
+            android:name=".old_pract.TimerService"
             android:enabled="true"
             android:exported="false" />
 
         <service
-            android:name=".OneTimeTimerService"
+            android:name=".old_pract.OneTimeTimerService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="shortService" />
 
-        <service android:name=".RandomNumberService"
+        <service android:name=".old_pract.RandomNumberService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="shortService"/>
