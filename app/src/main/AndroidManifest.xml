@@ -25,6 +25,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -35,28 +40,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Modul_4_pract_14"
         tools:targetApi="31"
-        android:name=".old_pract.WeatherApp">
-
-        <service
-            android:name=".old_pract.TimerService"
-            android:enabled="true"
-            android:exported="false" />
-
-        <service
-            android:name=".old_pract.OneTimeTimerService"
-            android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="shortService" />
-
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="dataSync"
-            android:exported="false" />
+        android:name=".ReminderApp">
 
         <service android:name=".old_pract.RandomNumberService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="shortService"/>
+
+        <receiver android:name=".ReminderReceiver" android:exported="false" />
+
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <activity
             android:name=".MainActivity"
@@ -71,3 +68,5 @@
         </activity>
     </application>
 </manifest>
+
+
