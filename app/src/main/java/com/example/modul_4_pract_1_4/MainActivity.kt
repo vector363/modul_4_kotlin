@@ -1,25 +1,16 @@
 package com.example.modul_4_pract_1_4
 
-import android.app.AlarmManager
-import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.media.audiofx.BassBoost
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.example.modul_4_pract_1_4.ui.theme.Modul_4_pract_14Theme
@@ -28,22 +19,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -57,157 +40,71 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Modul_4_pract_14Theme {
-                ReminderScreen()
+                AnimalFactScreen()
             }
         }
     }
 }
 
 @Composable
-fun ReminderScreen(
-    modifier: Modifier = Modifier
+fun AnimalFactScreen(
+    viewModel: AnimalFactViewModel = viewModel()
 ) {
-    val context = LocalContext.current
-
-    var isProcessing by remember { mutableStateOf(false) }
-    var reminderEnabled by remember { mutableStateOf(false) }
-    var nextReminderTime by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // проверка разрешений при запуске
-    LaunchedEffect(Unit) {
-        reminderEnabled = ReminderManager.isReminderEnabled(context)
-        if (reminderEnabled) {
-            nextReminderTime = ReminderManager.getNextReminderTime()
-        }
-    }
-
-    fun enableReminder() {
-        isProcessing = true
-        errorMessage = null
-
-        try {
-            ReminderManager.scheduleReminder(context)
-            reminderEnabled = true
-            nextReminderTime = ReminderManager.getNextReminderTime()
-        } catch (e: Exception) {
-            errorMessage = "Ошибка: ${e.message}"
-        } finally {
-            isProcessing = false
-        }
-    }
-
-    fun disableReminder() {
-        isProcessing = true
-        errorMessage = null
-        try {
-            ReminderManager.cancelReminder(context)
-            reminderEnabled = false
-            nextReminderTime = ""
-        } catch (e: Exception) {
-            errorMessage = "Ошибка: ${e.message}"
-        } finally {
-            isProcessing = false
-        }
-    }
-
-    fun toggleReminder() {
-        if (reminderEnabled) {
-            disableReminder()
-        } else {
-            enableReminder()
-        }
-    }
+    // Используем состояние из ViewModel
+    val isProcessing = viewModel.isLoading
+    val animalFact = viewModel.currentFact
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-
         Text(
-            text = "Напоминание о таблетке",
+            text = "Факты о животных",
             style = MaterialTheme.typography.headlineMedium,
             fontSize = 28.sp
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = if (reminderEnabled)
-                    MaterialTheme.colorScheme.primaryContainer
-                else
-                    MaterialTheme.colorScheme.surfaceVariant
+        if (isProcessing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.primary
             )
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = if (reminderEnabled) "🟢 Включено" else "⚪ Выключено",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontSize = 24.sp,
-                    color = if (reminderEnabled)
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    else
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (errorMessage != null) {
+        } else {
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
+                    containerColor = Color.Gray
                 )
             ) {
                 Text(
-                    text = "$errorMessage",
+                    text = if (animalFact.isNotEmpty()) animalFact else "Нажмите на кнопку чтобы узнать факт",
                     modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 18.sp,
+                    color = Color.White
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { toggleReminder() },
+            onClick = { viewModel.loadNewFact() },
             enabled = !isProcessing,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(60.dp)
+                .height(60.dp),
         ) {
-            if (isProcessing) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(24.dp),
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-            } else {
-                Text(
-                    text = if (reminderEnabled) "Выключить напоминание" else "Включить напоминание",
-                    fontSize = 18.sp
-                )
-            }
+            Text(
+                text = if (isProcessing) "Загрузка..." else "Новый факт!",
+                fontSize = 18.sp
+            )
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Напоминание будет приходить ежедневно в 20:00",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
