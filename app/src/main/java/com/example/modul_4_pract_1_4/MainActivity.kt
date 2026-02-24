@@ -1,13 +1,19 @@
 package com.example.modul_4_pract_1_4
 
+import android.content.Context
+import android.hardware.Sensor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,17 +24,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.modul_4_pract_1_4.old_pract.AnimalFactViewModel
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import androidx.compose.foundation.background
+import androidx.compose.ui.platform.LocalContext
+import kotlin.math.cos
+import kotlin.math.sin
 
 
 class MainActivity : ComponentActivity() {
@@ -38,102 +51,240 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Modul_4_pract_14Theme {
-                USDtoRubScreen()
+                CompassApp()
             }
         }
     }
 }
 
 @Composable
-fun USDtoRubScreen(
-    viewModel: USDtoRubViewModel = viewModel()
-) {
-    val isProcessing = viewModel.isLoading
-    val errorMessage = viewModel.errorMessage
+fun CompassApp() {
+    val context = LocalContext.current
+    val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
+
+    val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
+    val magnetometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) }
+
+    var hasCompass by remember { mutableStateOf(accelerometer != null && magnetometer != null) }
+    var azimuth by remember { mutableStateOf(0f) }
+    var isSensorAvailable by remember { mutableStateOf(true) }
+
+    val rotation = remember { Animatable(0f) }
+
+    val lowPassFilter = remember { LowPassFilter() }
+
+    DisposableEffect(Unit) {
+        if (!hasCompass) {
+            isSensorAvailable = false
+            return@DisposableEffect onDispose { }
+        }
+
+        val listener = object : SensorEventListener {
+            val gravity = FloatArray(3)
+            val geomagnetic = FloatArray(3)
+
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event == null) return
+
+                when (event.sensor.type) {
+                    Sensor.TYPE_ACCELEROMETER -> {
+                        gravity[0] = event.values[0]
+                        gravity[1] = event.values[1]
+                        gravity[2] = event.values[2]
+                    }
+                    Sensor.TYPE_MAGNETIC_FIELD -> {
+                        geomagnetic[0] = event.values[0]
+                        geomagnetic[1] = event.values[1]
+                        geomagnetic[2] = event.values[2]
+                    }
+                }
+
+                val rotationMatrix = FloatArray(9)
+                if (SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomagnetic)) {
+                    val orientation = FloatArray(3)
+                    SensorManager.getOrientation(rotationMatrix, orientation)
+
+                    var newAzimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
+                    newAzimuth = (newAzimuth + 360) % 360
+
+                    val filteredAzimuth = lowPassFilter.apply(azimuth, newAzimuth)
+
+                    azimuth = filteredAzimuth
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            }
+        }
+
+        sensorManager.registerListener(
+            listener,
+            accelerometer,
+            SensorManager.SENSOR_DELAY_GAME
+        )
+        sensorManager.registerListener(
+            listener,
+            magnetometer,
+            SensorManager.SENSOR_DELAY_GAME
+        )
+
+        onDispose {
+            sensorManager.unregisterListener(listener)
+        }
+    }
+
+    LaunchedEffect(azimuth) {
+        rotation.animateTo(
+            targetValue = -azimuth,
+            animationSpec = tween(
+                durationMillis = 500,
+                easing = FastOutSlowInEasing
+            )
+        )
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(24.dp)
+            .background(Color.Black),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Курс USD → RUB",
+            text = "Компас",
             style = MaterialTheme.typography.headlineMedium,
-            fontSize = 28.sp
+            fontSize = 28.sp,
+            color = Color.White
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "${azimuth.toInt()}°",
+            fontSize = 20.sp,
+            color = Color.White
+        )
+
+        Text(
+            text = getDirectionName(azimuth),
+            fontSize = 16.sp,
+            color = Color.Gray
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        if (isProcessing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(48.dp),
-                color = MaterialTheme.colorScheme.primary
-            )
-        } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Gray
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = viewModel.getFormattedRate(),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontSize = 32.sp,
-                    )
-                }
-            }
-        }
-
-        // Показываем ошибку если есть
-        if (errorMessage != null) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
-                )
-            ) {
-                Text(
-                    text = "$errorMessage",
-                    modifier = Modifier.padding(16.dp),
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = { viewModel.forceUpdate() },
-            enabled = !isProcessing,
+        CompassView(
+            rotation = azimuth,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(60.dp)
-        ) {
-            Text(
-                text = if (isProcessing) "Обновление..." else "Обновить сейчас",
-                fontSize = 18.sp
-            )
-        }
-
-        // Показываем время следующего обновления (опционально)
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Автообновление каждые 5 секунд",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+                .fillMaxWidth(0.8f)
+                .aspectRatio(1f)
         )
     }
+}
+
+// Низкочастотный фильтр для сглаживания показаний
+class LowPassFilter {
+    private var filteredValue = 0f
+    private val alpha = 0.2f // коэффициент фильтрации (меньше = более плавно)
+    private var initialized = false
+
+    fun apply(current: Float, new: Float): Float {
+        if (!initialized) {
+            filteredValue = new
+            initialized = true
+            return new
+        }
+
+        // Обработка перехода через 360/0 градусов
+        var newValue = new
+        if (Math.abs(newValue - filteredValue) > 180) {
+            if (newValue > filteredValue) {
+                filteredValue += 360
+            } else {
+                newValue += 360
+            }
+        }
+
+        filteredValue = alpha * newValue + (1 - alpha) * filteredValue
+
+        // Нормализуем обратно в диапазон 0-360
+        return filteredValue % 360
+    }
+}
+
+// Получение названия направления
+@Composable
+fun getDirectionName(azimuth: Float): String {
+    return when {
+        azimuth < 22.5 || azimuth >= 337.5 -> "Север"
+        azimuth < 67.5 -> "Северо-восток"
+        azimuth < 112.5 -> "Восток"
+        azimuth < 157.5 -> "Юго-восток"
+        azimuth < 202.5 -> "Юг"
+        azimuth < 247.5 -> "Юго-запад"
+        azimuth < 292.5 -> "Запад"
+        else -> "Северо-запад"
+    }
+}
+
+
+@Composable
+fun CompassView(
+    rotation: Float, // угол азимута (0-360°)
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val centerX = size.width / 2
+        val centerY = size.height / 2
+        val radius = minOf(centerX, centerY) * 0.9f
+
+        // Рисуем круг компаса
+        drawCircle(
+            color = Color.DarkGray,
+            radius = radius,
+            center = Offset(centerX, centerY)
+        )
+
+        // Рисуем стрелку, повернутую на azimuth градусов
+        drawRotatedArrow(centerX, centerY, radius * 0.7f, rotation)
+    }
+}
+
+private fun DrawScope.drawRotatedArrow(centerX: Float, centerY: Float, length: Float, azimuth: Float) {
+    // Конвертируем градусы в радианы
+    val rad = Math.toRadians(azimuth.toDouble()).toFloat()
+
+    // Конец северной части стрелки (красная)
+    val northX = centerX + length * sin(rad)
+    val northY = centerY - length * cos(rad)
+
+    // Конец южной части стрелки (серая) - противоположное направление
+    val southX = centerX - length * sin(rad)
+    val southY = centerY + length * cos(rad)
+
+    // Северная часть (красная)
+    drawLine(
+        color = Color.Red,
+        start = Offset(centerX, centerY),
+        end = Offset(northX, northY),
+        strokeWidth = 8.dp.toPx()
+    )
+
+    // Южная часть (серая)
+    drawLine(
+        color = Color.Gray,
+        start = Offset(centerX, centerY),
+        end = Offset(southX, southY),
+        strokeWidth = 8.dp.toPx()
+    )
+
+    // Маленький круг в центре
+    drawCircle(
+        color = Color.White,
+        radius = 6.dp.toPx(),
+        center = Offset(centerX, centerY)
+    )
 }
 
 
