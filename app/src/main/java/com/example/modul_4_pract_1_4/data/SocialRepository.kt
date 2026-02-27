@@ -43,11 +43,9 @@ class SocialRepository(private val context: Context) {
 
 
                 }
-
                 delay((500..1500).random().toLong())
 
                 allComments?.filter { it.postid == postId } ?: emptyList()
-
 
             } catch (e: IOException) {
                 throw e
@@ -58,10 +56,7 @@ class SocialRepository(private val context: Context) {
 
     suspend fun loadAvatar(url: String): String {
         return withContext(Dispatchers.IO) {
-            // Имитация загрузки аватарки (разное время)
             delay((300..1000).random().toLong())
-
-            // Возвращаем цвет или URL (в реальном приложении тут была бы загрузка картинки)
             listOf("#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7").random()
         }
     }

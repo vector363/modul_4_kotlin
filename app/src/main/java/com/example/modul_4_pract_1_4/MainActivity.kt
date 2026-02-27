@@ -50,9 +50,7 @@ import kotlinx.coroutines.async
 
 
 class MainActivity : ComponentActivity() {
-
     private val repository by lazy { SocialRepository(this) }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +64,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// Composable функции
+
 @Composable
 fun SocialFeedScreen(repository: SocialRepository) {
     var posts by remember { mutableStateOf<List<SocialPost>>(emptyList()) }
@@ -84,7 +82,6 @@ fun SocialFeedScreen(repository: SocialRepository) {
     ) {
         coroutineScope.launch {
             try {
-
                 val avatarDeferred = async {
                     try {
                         val color = repo.loadAvatar(postData.post.avatarurl)
@@ -116,7 +113,6 @@ fun SocialFeedScreen(repository: SocialRepository) {
                     }
                 }
 
-                // Ждем ОБЕ задачи и объединяем результаты
                 val avatarResult = avatarDeferred.await()
                 val commentsResult = commentsDeferred.await()
 
@@ -144,7 +140,7 @@ fun SocialFeedScreen(repository: SocialRepository) {
         }
     }
 
-    // Функция загрузки постов
+
     fun loadPosts(repo: SocialRepository) {
         loadJob?.cancel()
         loadJob = coroutineScope.launch {
@@ -177,7 +173,7 @@ fun SocialFeedScreen(repository: SocialRepository) {
         }
     }
 
-    // Загрузка постов при запуске
+    // загрузка постов при запуске
     LaunchedEffect(Unit) {
         loadPosts(repository)
     }
