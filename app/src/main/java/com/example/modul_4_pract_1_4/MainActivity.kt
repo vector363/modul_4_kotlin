@@ -59,7 +59,7 @@ fun OneTimeTimerScreen() {
     var secondsInput by remember { mutableStateOf("") }
     var isTimerRunning by remember { mutableStateOf(false) }
 
-    // Receiver для получения события о завершении таймера
+    // receiver для получения события о завершении таймера
     val timerFinishedReceiver = remember {
         object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
