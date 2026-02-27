@@ -50,7 +50,6 @@ class MainActivity : ComponentActivity() {
 fun AnimalFactScreen(
     viewModel: AnimalFactViewModel = viewModel()
 ) {
-    // Используем состояние из ViewModel
     val isProcessing = viewModel.isLoading
     val animalFact = viewModel.currentFact
 
