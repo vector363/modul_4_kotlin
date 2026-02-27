@@ -41,7 +41,6 @@ class CityWeatherWorker(
                             "stage" to "Загрузка $city"
                         )
                     )
-
                 }
 
                 val weather = WeatherData(

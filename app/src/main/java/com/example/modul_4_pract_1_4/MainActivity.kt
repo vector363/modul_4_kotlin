@@ -182,7 +182,7 @@ fun WeatherScreen(
     }
 
     fun startWeatherDownload() {
-        // Сбрасываем состояния
+        // сброс состояния
         cities.indices.forEach { index ->
             cityStates[index] = CityLoadState.IDLE
             cityWeatherData[index] = null
@@ -190,7 +190,7 @@ fun WeatherScreen(
 
         coroutineScope.launch {
             try {
-                // Создаем параллельные Worker'ы для каждого города
+                // создаем Worker'ы для каждого города
                 val cityWorkers = cities.mapIndexed { index, city ->
                     OneTimeWorkRequestBuilder<CityWeatherWorker>()
                         .setInputData(
@@ -203,12 +203,12 @@ fun WeatherScreen(
                         .build()
                 }
 
-                // Создаем финальный Worker для отчета
+                // создаем финальный Worker для отчета
                 val reportWorker = OneTimeWorkRequestBuilder<WeatherReportWorker>()
                     .addTag("report")
                     .build()
 
-                // Запускаем все параллельно, затем финальный
+                // запускаем все параллельно, затем финальный
                 workManager
                     .beginUniqueWork(
                         "weather_download",
