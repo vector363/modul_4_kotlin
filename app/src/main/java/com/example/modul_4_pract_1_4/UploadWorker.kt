@@ -25,8 +25,6 @@ class UploadWorker(
                     Data.Builder().putString("error", "Нет пути к фото с водяным знаком").build()
                 )
 
-            val originalPath = inputData.getString("original_photo_path") ?: "unknown"
-
             for (i in 1..15) {
                 delay(200)
                 val progress = (i * 100) / 15
