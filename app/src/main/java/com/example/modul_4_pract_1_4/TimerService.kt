@@ -41,7 +41,7 @@ class TimerService : Service()  {
 
                 updateNotification(secondsElapsed)
 
-                // Отправляем broadcast с указанием пакета
+                // отправляем broadcast с указанием пакета
                 val intent = Intent(TIMER_UPDATE_ACTION).apply {
                     putExtra(TIMER_VALUE_EXTRA, secondsElapsed)
                     setPackage(packageName)

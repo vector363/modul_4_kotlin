@@ -61,7 +61,7 @@ fun TimerNotification(context: Context){
             override fun onReceive(context: Context?, intent: Intent?) {
                 if (intent?.action == TimerService.TIMER_UPDATE_ACTION) {
                     val seconds = intent.getIntExtra(TimerService.TIMER_VALUE_EXTRA, 0)
-                    Log.d("MAIN_ACTIVITY", "📱 Получен broadcast: $seconds сек")
+                    Log.d("MAIN_ACTIVITY", "Получен broadcast: $seconds сек")
                     timerValue = seconds
                 }
             }
@@ -69,12 +69,12 @@ fun TimerNotification(context: Context){
     }
 
     DisposableEffect(Unit) {
-        Log.d("MAIN_ACTIVITY", "📱 Регистрация receiver")
+        Log.d("MAIN_ACTIVITY", "Регистрация receiver")
         val filter = IntentFilter(TimerService.TIMER_UPDATE_ACTION)
         context.registerReceiver(broadcastReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
 
         onDispose {
-            Log.d("MAIN_ACTIVITY", "📱 Отмена регистрации receiver")
+            Log.d("MAIN_ACTIVITY", "Отмена регистрации receiver")
             context.unregisterReceiver(broadcastReceiver)
         }
     }
