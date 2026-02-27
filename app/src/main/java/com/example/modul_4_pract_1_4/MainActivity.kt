@@ -40,7 +40,6 @@ class MainActivity : ComponentActivity() {
                     try {
                         LoadUsers()
                     } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки пользователей: ${e.message}")
                         emptyList<String>()
                     }
                 }
@@ -48,7 +47,6 @@ class MainActivity : ComponentActivity() {
                     try {
                         LoadSales()
                     } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки продаж: ${e.message}")
                         emptyMap<String, Int>()
                     }
                 }
@@ -57,7 +55,6 @@ class MainActivity : ComponentActivity() {
                     try {
                         LoadWeather()
                     } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки погоды: ${e.message}")
                         emptyList<String>()
                     }
                 }
@@ -73,13 +70,12 @@ class MainActivity : ComponentActivity() {
             }
         }
         Log.d(TAG, "Общее время выполнения: ${time / 1000.0} секунд")
-
-
     }
+
     suspend fun LoadUsers():List<String>{
         delay(1800)
 
-        if (Random.nextFloat() < 0.7f) {
+        if (Random.nextFloat() < 0.1f) {
             throw Exception("Ошибка соединения при загрузке пользователей")
         }
 
@@ -89,6 +85,7 @@ class MainActivity : ComponentActivity() {
         val names = users.map { it.name }
         return names
     }
+
 
     suspend fun LoadSales():Map<String, Int>{
         delay(1200)
@@ -128,6 +125,7 @@ class MainActivity : ComponentActivity() {
         val id: Int,
         val name: String
     )
+
     data class SaleItem(
         val product: String,
         val qty: Int,
