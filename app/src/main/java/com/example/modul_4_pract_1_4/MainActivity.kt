@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
             randomNumberService = binder.getService()
             isBound = true
 
-            // Регистрируем слушатель
+            // слушатель
             randomNumberService?.registerListener(numberUpdateListener)
 
             randomNumberService?.startGenerating()
@@ -84,20 +84,20 @@ class MainActivity : ComponentActivity() {
         if (!isBound) {
             val intent = Intent(this, RandomNumberService::class.java)
             bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-            println("🔌 Activity: Запрос на подключение к сервису")
+            println("Activity: Запрос на подключение к сервису")
         }
     }
 
     private fun unbindFromService() {
         if (isBound) {
-            //ОСТАНАВЛИВАЕМ ГЕНЕРАЦИЮ
+
             randomNumberService?.stopGenerating()
             randomNumberService?.unregisterListener(numberUpdateListener)
             unbindService(serviceConnection)
             isBound = false
             randomNumberService = null
             _currentNumber.value = 0
-            println("🔌 Activity: Отключение от сервиса")
+            println("Activity: Отключение от сервиса")
         }
     }
 

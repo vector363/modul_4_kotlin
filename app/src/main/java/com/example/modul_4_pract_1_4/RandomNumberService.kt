@@ -60,7 +60,7 @@ class RandomNumberService : Service() {
 
     fun registerListener(listener: NumberUpdateListener) {
         listeners.add(listener)
-        // Сразу отправляем текущее число новому слушателю
+        // сразу отправляем текущее число новому слушателю
         listener.onNumberUpdated(currentNumber)
     }
 
