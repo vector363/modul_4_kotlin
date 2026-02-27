@@ -15,38 +15,27 @@ import kotlin.random.Random
 
 class USDtoRubViewModel : ViewModel() {
 
-    // Используем StateFlow для хранения курса
+    // StateFlow для хранения курса
     private val _rate = MutableStateFlow(0.0)
-    val rate: StateFlow<Double> = _rate.asStateFlow()
 
-    // Для отслеживания предыдущего значения (чтобы показать стрелку)
     private var previousRate by mutableStateOf(0.0)
 
-    // Состояния загрузки
     var isLoading by mutableStateOf(false)
         private set
 
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    // Для определения направления изменения курса
-    val isIncreasing: Boolean
-        get() = _rate.value > previousRate
-
-    val isDecreasing: Boolean
-        get() = _rate.value < previousRate
 
     init {
-        // При создании ViewModel запускаем автоматическое обновление
         startAutoUpdate()
-        // И сразу загружаем первый курс
         loadNewRate()
     }
 
     private fun startAutoUpdate() {
         viewModelScope.launch {
             while (true) {
-                delay(5000) // Каждые 5 секунд
+                delay(5000)
                 loadNewRate()
             }
         }
@@ -58,16 +47,10 @@ class USDtoRubViewModel : ViewModel() {
             errorMessage = null
 
             try {
-                // Сохраняем предыдущее значение
                 previousRate = _rate.value
-
-                // Имитация загрузки с задержкой
                 delay(1000)
-
-                // Генерируем случайный курс (базовое значение ~90, разброс ±2)
                 val newRate = generateRandomRate()
 
-                // Обновляем StateFlow
                 _rate.update { newRate }
 
             } catch (e: Exception) {
@@ -78,7 +61,6 @@ class USDtoRubViewModel : ViewModel() {
         }
     }
 
-    // Принудительное обновление (для кнопки)
     fun forceUpdate() {
         loadNewRate()
     }
@@ -93,7 +75,6 @@ class USDtoRubViewModel : ViewModel() {
         return Math.round(this * 100) / 100.0
     }
 
-    // Форматирование курса для отображения
     fun getFormattedRate(): String {
         return String.format("%.2f ₽", _rate.value)
     }

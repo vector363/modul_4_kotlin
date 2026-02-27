@@ -23,12 +23,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.modul_4_pract_1_4.old_pract.AnimalFactViewModel
 
 
 class MainActivity : ComponentActivity() {
@@ -93,8 +91,6 @@ fun USDtoRubScreen(
                 }
             }
         }
-
-        // Показываем ошибку если есть
         if (errorMessage != null) {
             Spacer(modifier = Modifier.height(16.dp))
             Card(
@@ -126,7 +122,6 @@ fun USDtoRubScreen(
             )
         }
 
-        // Показываем время следующего обновления (опционально)
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "Автообновление каждые 5 секунд",
