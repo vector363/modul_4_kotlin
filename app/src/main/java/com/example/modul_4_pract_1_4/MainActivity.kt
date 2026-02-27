@@ -23,8 +23,6 @@ import kotlin.coroutines.cancellation.CancellationException
 
 class MainActivity : ComponentActivity() {
 
-    private val TAG = "MainActivity"
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -37,7 +35,6 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             findDuplicates()
         }
-
     }
 
 
@@ -64,36 +61,12 @@ class MainActivity : ComponentActivity() {
         println("Общее время выполнения: ${time / 1000.0} секунд")
     }
 
-//    private fun createTestJsonFiles() {
-//        val testDir = File(filesDir, "test_json")
-//
-//        File(testDir, "user1.json").writeText("""{"id": 1, "name": "Alice"}""")
-//        File(testDir, "user2.json").writeText("""{"id": 2, "name": "Bob"}""")
-//        File(testDir, "user3.json").writeText("""{"id": 3, "name": "Charlie"}""")
-//
-//        File(testDir, "duplicate1.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
-//        File(testDir, "duplicate2.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
-//        File(testDir, "duplicate3.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
-//
-//        File(testDir, "group2_a.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
-//        File(testDir, "group2_b.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
-//
-//        val subDir = File(testDir, "subdir")
-//        subDir.mkdirs()
-//        File(subDir, "nested1.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
-//        File(subDir, "nested2.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
-//
-//        File(subDir, "unique_nested.json").writeText("""{"city": "Tokyo", "temp": 11, "condition": "rain"}""")
-//
-//        println("Тестовые JSON файлы созданы в: ${testDir.absolutePath}")
-//        println("Создано файлов: ${testDir.walkTopDown().filter { it.isFile && it.extension == "json" }.count()}")
-//
-//    }
+
 
 
     private suspend fun findDuplicateFiles(rootPath: String): Map<String, List<File>> {
         return withContext(Dispatchers.IO) {
-            //поиск файлов json
+
             val jsonFiles = findJsonFiles(File(rootPath))
             println("Найдено JSON файлов: ${jsonFiles.size}")
 
@@ -108,7 +81,6 @@ class MainActivity : ComponentActivity() {
             println()
 
 
-            // для каждого файла вычисляем SHA-256 параллельно
             val deferredResults = jsonFiles.map { file ->
                 async {
                     file to computeSha256(file)
@@ -164,7 +136,6 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                // конвертируем в hex строку
                 digest.digest().joinToString("") { "%02x".format(it) }.also { hash ->
                     println("Хеш для ${file.name}: ${hash.take(8)}...")
                 }
@@ -190,6 +161,33 @@ class MainActivity : ComponentActivity() {
         println("\nВсего групп дубликатов: ${duplicates.size}")
     }
 }
+
+
+//    private fun createTestJsonFiles() {
+//        val testDir = File(filesDir, "test_json")
+//
+//        File(testDir, "user1.json").writeText("""{"id": 1, "name": "Alice"}""")
+//        File(testDir, "user2.json").writeText("""{"id": 2, "name": "Bob"}""")
+//        File(testDir, "user3.json").writeText("""{"id": 3, "name": "Charlie"}""")
+//
+//        File(testDir, "duplicate1.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
+//        File(testDir, "duplicate2.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
+//        File(testDir, "duplicate3.json").writeText("""{"product": "Coffee", "qty": 42, "price": 250}""")
+//
+//        File(testDir, "group2_a.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
+//        File(testDir, "group2_b.json").writeText("""{"city": "Moscow", "temp": -18, "condition": "snow"}""")
+//
+//        val subDir = File(testDir, "subdir")
+//        subDir.mkdirs()
+//        File(subDir, "nested1.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
+//        File(subDir, "nested2.json").writeText("""{"city": "New York", "temp": -5, "condition": "cloudy"}""")
+//
+//        File(subDir, "unique_nested.json").writeText("""{"city": "Tokyo", "temp": 11, "condition": "rain"}""")
+//
+//        println("тестовые JSON файлы созданы")
+//        println("создано файлов: ${testDir.walkTopDown().filter { it.isFile && it.extension == "json" }.count()}")
+//
+//    }
 
 
 
