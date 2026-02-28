@@ -183,10 +183,10 @@ fun CompassApp() {
     }
 }
 
-// Низкочастотный фильтр для сглаживания показаний
+// низкочастотный фильтр для сглаживания показаний
 class LowPassFilter {
     private var filteredValue = 0f
-    private val alpha = 0.2f // коэффициент фильтрации (меньше = более плавно)
+    private val alpha = 0.2f
     private var initialized = false
 
     fun apply(current: Float, new: Float): Float {
@@ -196,7 +196,6 @@ class LowPassFilter {
             return new
         }
 
-        // Обработка перехода через 360/0 градусов
         var newValue = new
         if (Math.abs(newValue - filteredValue) > 180) {
             if (newValue > filteredValue) {
@@ -208,12 +207,10 @@ class LowPassFilter {
 
         filteredValue = alpha * newValue + (1 - alpha) * filteredValue
 
-        // Нормализуем обратно в диапазон 0-360
         return filteredValue % 360
     }
 }
 
-// Получение названия направления
 @Composable
 fun getDirectionName(azimuth: Float): String {
     return when {
@@ -231,7 +228,7 @@ fun getDirectionName(azimuth: Float): String {
 
 @Composable
 fun CompassView(
-    rotation: Float, // угол азимута (0-360°)
+    rotation: Float,
     modifier: Modifier = Modifier
 ) {
     Canvas(modifier = modifier) {
@@ -239,31 +236,25 @@ fun CompassView(
         val centerY = size.height / 2
         val radius = minOf(centerX, centerY) * 0.9f
 
-        // Рисуем круг компаса
         drawCircle(
             color = Color.DarkGray,
             radius = radius,
             center = Offset(centerX, centerY)
         )
 
-        // Рисуем стрелку, повернутую на azimuth градусов
         drawRotatedArrow(centerX, centerY, radius * 0.7f, rotation)
     }
 }
 
 private fun DrawScope.drawRotatedArrow(centerX: Float, centerY: Float, length: Float, azimuth: Float) {
-    // Конвертируем градусы в радианы
     val rad = Math.toRadians(azimuth.toDouble()).toFloat()
 
-    // Конец северной части стрелки (красная)
     val northX = centerX + length * sin(rad)
     val northY = centerY - length * cos(rad)
 
-    // Конец южной части стрелки (серая) - противоположное направление
     val southX = centerX - length * sin(rad)
     val southY = centerY + length * cos(rad)
 
-    // Северная часть (красная)
     drawLine(
         color = Color.Red,
         start = Offset(centerX, centerY),
@@ -271,7 +262,6 @@ private fun DrawScope.drawRotatedArrow(centerX: Float, centerY: Float, length: F
         strokeWidth = 8.dp.toPx()
     )
 
-    // Южная часть (серая)
     drawLine(
         color = Color.Gray,
         start = Offset(centerX, centerY),
@@ -279,7 +269,6 @@ private fun DrawScope.drawRotatedArrow(centerX: Float, centerY: Float, length: F
         strokeWidth = 8.dp.toPx()
     )
 
-    // Маленький круг в центре
     drawCircle(
         color = Color.White,
         radius = 6.dp.toPx(),
